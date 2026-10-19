@@ -1,0 +1,1131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>NEON FLUX OVERDRIVE</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@500;700&display=swap');
+
+        * {
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-user-select: none;
+            -webkit-touch-callout: none;
+            touch-action: none;
+        }
+
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: #05050d;
+            font-family: 'Rajdhani', sans-serif;
+            color: #fff;
+        }
+
+        .font-orbitron {
+            font-family: 'Orbitron', sans-serif;
+        }
+
+        /* Canvas setup */
+        #gameCanvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+            background: #05050d;
+        }
+
+        /* Neon Glow Effects */
+        .neon-border-cyan {
+            box-shadow: 0 0 15px rgba(0, 243, 255, 0.4), inset 0 0 10px rgba(0, 243, 255, 0.2);
+            border: 2px solid #00f3ff;
+        }
+        .neon-border-magenta {
+            box-shadow: 0 0 15px rgba(255, 0, 85, 0.4), inset 0 0 10px rgba(255, 0, 85, 0.2);
+            border: 2px solid #ff0055;
+        }
+        .neon-text-cyan {
+            text-shadow: 0 0 10px rgba(0, 243, 255, 0.8), 0 0 20px rgba(0, 243, 255, 0.4);
+        }
+        .neon-text-magenta {
+            text-shadow: 0 0 10px rgba(255, 0, 85, 0.8), 0 0 20px rgba(255, 0, 85, 0.4);
+        }
+
+        /* Touch Button Styling */
+        .touch-btn {
+            background: rgba(10, 15, 30, 0.65);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            border: 2px solid rgba(0, 243, 255, 0.4);
+            border-radius: 20px;
+            color: #00f3ff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.8rem;
+            transition: background 0.05s ease, transform 0.05s ease, border-color 0.05s ease;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5), inset 0 0 10px rgba(0, 243, 255, 0.1);
+            pointer-events: auto;
+        }
+
+        .touch-btn.active, .touch-btn:active {
+            background: rgba(0, 243, 255, 0.35);
+            border-color: #00f3ff;
+            transform: scale(0.92);
+            box-shadow: 0 0 25px rgba(0, 243, 255, 0.8), inset 0 0 15px rgba(0, 243, 255, 0.5);
+            color: #ffffff;
+        }
+
+        .touch-btn-magenta {
+            border-color: rgba(255, 0, 85, 0.4);
+            color: #ff0055;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5), inset 0 0 10px rgba(255, 0, 85, 0.1);
+        }
+
+        .touch-btn-magenta.active, .touch-btn-magenta:active {
+            background: rgba(255, 0, 85, 0.35);
+            border-color: #ff0055;
+            box-shadow: 0 0 25px rgba(255, 0, 85, 0.8), inset 0 0 15px rgba(255, 0, 85, 0.5);
+            color: #ffffff;
+        }
+
+        /* Hide scrollbars completely */
+        ::-webkit-scrollbar {
+            display: none;
+        }
+    </style>
+</head>
+<body class="relative w-full h-full select-none overflow-hidden">
+
+    <!-- Game Canvas -->
+    <canvas id="gameCanvas"></canvas>
+
+    <!-- UI Overlay Layer -->
+    <div id="uiOverlay" class="absolute inset-0 pointer-events-none flex flex-col justify-between p-4 z-10">
+        
+        <!-- Top HUD -->
+        <div class="flex justify-between items-center w-full max-w-5xl mx-auto pointer-events-auto">
+            <div class="flex items-center gap-4 bg-slate-900/80 backdrop-blur border border-cyan-500/30 px-4 py-2 rounded-xl shadow-lg">
+                <button id="btnPause" class="text-cyan-400 hover:text-white transition text-xl focus:outline-none">
+                    <i class="fas fa-pause"></i>
+                </button>
+                <div>
+                    <span class="text-xs uppercase text-slate-400 font-bold block">World / Level</span>
+                    <span id="hudLevel" class="font-orbitron text-lg font-bold text-cyan-400">1 - 01</span>
+                </div>
+            </div>
+
+            <div class="bg-slate-900/80 backdrop-blur border border-cyan-500/30 px-5 py-2 rounded-xl shadow-lg text-center">
+                <span class="text-xs uppercase text-slate-400 font-bold block">Time</span>
+                <span id="hudTimer" class="font-orbitron text-2xl font-black text-amber-400">00:00.00</span>
+            </div>
+
+            <div class="flex items-center gap-3">
+                <button id="btnRestart" class="bg-slate-900/80 backdrop-blur border border-magenta-500/30 hover:border-magenta-500 text-pink-500 hover:text-white px-3 py-2 rounded-xl transition font-bold flex items-center gap-2">
+                    <i class="fas fa-redo-alt"></i> <span class="hidden sm:inline">Reset</span>
+                </button>
+                <button id="btnFullscreen" class="bg-slate-900/80 backdrop-blur border border-cyan-500/30 text-cyan-400 hover:text-white p-2.5 rounded-xl transition">
+                    <i class="fas fa-expand"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Mobile Touch Controls Layout -->
+        <div id="touchControls" class="w-full flex justify-between items-end pb-4 px-2 sm:px-8 pointer-events-none select-none">
+            <!-- D-Pad Left / Right -->
+            <div class="flex gap-4 pointer-events-auto">
+                <div id="btnLeft" class="touch-btn w-16 h-16 sm:w-20 sm:h-20">
+                    <i class="fas fa-caret-left"></i>
+                </div>
+                <div id="btnRight" class="touch-btn w-16 h-16 sm:w-20 sm:h-20">
+                    <i class="fas fa-caret-right"></i>
+                </div>
+            </div>
+
+            <!-- Action Buttons Jump / Flux -->
+            <div class="flex gap-4 pointer-events-auto">
+                <div id="btnFlux" class="touch-btn touch-btn-magenta w-16 h-16 sm:w-20 sm:h-20">
+                    <i class="fas fa-bolt"></i>
+                </div>
+                <div id="btnJump" class="touch-btn w-20 h-20 sm:w-24 sm:h-24">
+                    <i class="fas fa-arrow-up"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Menu Overlay -->
+    <div id="menuMain" class="absolute inset-0 bg-slate-950/90 backdrop-blur-md flex flex-col items-center justify-center p-6 z-20">
+        <h1 class="font-orbitron text-5xl sm:text-7xl font-black text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-fuchsia-500 to-pink-500 mb-2 neon-text-cyan tracking-wider">
+            NEON FLUX
+        </h1>
+        <p class="text-cyan-300/80 font-bold tracking-widest uppercase mb-8 text-sm sm:text-base">OVERDRIVE // SPEEDRUNNER</p>
+
+        <div class="flex flex-col gap-4 w-full max-w-xs">
+            <button id="btnPlay" class="w-full py-4 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 font-orbitron font-black text-xl rounded-xl shadow-lg transition transform hover:-translate-y-0.5 active:translate-y-0">
+                <i class="fas fa-play mr-2"></i> START RUN
+            </button>
+            <button id="btnLevelSelect" class="w-full py-3 bg-slate-900 border border-cyan-500/40 hover:border-cyan-400 text-cyan-300 font-bold rounded-xl transition">
+                <i class="fas fa-th mr-2"></i> LEVEL SELECT (50)
+            </button>
+            <button id="btnShop" class="w-full py-3 bg-slate-900 border border-fuchsia-500/40 hover:border-fuchsia-400 text-fuchsia-300 font-bold rounded-xl transition">
+                <i class="fas fa-paint-brush mr-2"></i> COSMETIC SHOP
+            </button>
+            <button id="btnSettings" class="w-full py-3 bg-slate-900 border border-slate-700 hover:border-slate-500 text-slate-300 font-bold rounded-xl transition">
+                <i class="fas fa-cog mr-2"></i> SETTINGS
+            </button>
+        </div>
+    </div>
+
+    <!-- Level Select Modal -->
+    <div id="menuLevels" class="hidden absolute inset-0 bg-slate-950/95 backdrop-blur-md flex flex-col items-center justify-between p-6 z-30">
+        <div class="w-full max-w-4xl flex justify-between items-center mb-4">
+            <h2 class="font-orbitron text-2xl sm:text-3xl font-bold text-cyan-400">SELECT LEVEL</h2>
+            <button id="btnCloseLevels" class="text-slate-400 hover:text-white text-2xl px-2"><i class="fas fa-times"></i></button>
+        </div>
+
+        <!-- World Selector Tabs -->
+        <div id="worldTabs" class="flex gap-2 mb-4 overflow-x-auto w-full max-w-4xl pb-2 justify-start sm:justify-center">
+            <!-- Generated dynamically -->
+        </div>
+
+        <!-- Level Grid -->
+        <div id="levelGrid" class="grid grid-cols-5 sm:grid-cols-10 gap-3 w-full max-w-4xl overflow-y-auto max-h-[60vh] p-2">
+            <!-- Generated dynamically -->
+        </div>
+
+        <div class="mt-4 text-xs text-slate-400 text-center">Beat levels to unlock subsequent worlds & challenges!</div>
+    </div>
+
+    <!-- Shop Modal -->
+    <div id="menuShop" class="hidden absolute inset-0 bg-slate-950/95 backdrop-blur-md flex flex-col items-center justify-between p-6 z-30">
+        <div class="w-full max-w-2xl flex justify-between items-center mb-4">
+            <h2 class="font-orbitron text-2xl font-bold text-fuchsia-400">TRAIL COSMETICS</h2>
+            <button id="btnCloseShop" class="text-slate-400 hover:text-white text-2xl px-2"><i class="fas fa-times"></i></button>
+        </div>
+
+        <div id="shopGrid" class="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full max-w-2xl overflow-y-auto max-h-[65vh] p-2">
+            <!-- Shop items generated dynamically -->
+        </div>
+
+        <div class="text-sm text-cyan-400">Select trail colors to customize your runner style.</div>
+    </div>
+
+    <!-- Settings Modal -->
+    <div id="menuSettings" class="hidden absolute inset-0 bg-slate-950/95 backdrop-blur-md flex flex-col items-center justify-center p-6 z-30">
+        <div class="w-full max-w-md bg-slate-900 border border-slate-800 rounded-2xl p-6 flex flex-col gap-6">
+            <div class="flex justify-between items-center">
+                <h2 class="font-orbitron text-2xl font-bold text-slate-200">SETTINGS</h2>
+                <button id="btnCloseSettings" class="text-slate-400 hover:text-white text-xl"><i class="fas fa-times"></i></button>
+            </div>
+
+            <div class="flex flex-col gap-4">
+                <div class="flex justify-between items-center">
+                    <span class="font-bold text-slate-300">Sound Effects</span>
+                    <input id="settingSFX" type="checkbox" checked class="w-5 h-5 accent-cyan-400 cursor-pointer">
+                </div>
+                <div class="flex justify-between items-center">
+                    <span class="font-bold text-slate-300">Ghost Runner Recording</span>
+                    <input id="settingGhost" type="checkbox" checked class="w-5 h-5 accent-cyan-400 cursor-pointer">
+                </div>
+                <div class="flex justify-between items-center">
+                    <span class="font-bold text-slate-300">Touch Controls Visible</span>
+                    <input id="settingTouchVis" type="checkbox" checked class="w-5 h-5 accent-cyan-400 cursor-pointer">
+                </div>
+            </div>
+
+            <button id="btnResetData" class="mt-4 w-full py-2 bg-red-900/40 hover:bg-red-800/60 border border-red-500/40 text-red-300 font-bold rounded-xl text-sm transition">
+                Clear Saved Best Times & Progress
+            </button>
+        </div>
+    </div>
+
+    <!-- Pause Modal -->
+    <div id="menuPause" class="hidden absolute inset-0 bg-slate-950/80 backdrop-blur-md flex flex-col items-center justify-center p-6 z-30">
+        <h2 class="font-orbitron text-4xl font-black text-cyan-400 mb-6 tracking-wider">PAUSED</h2>
+        <div class="flex flex-col gap-4 w-full max-w-xs">
+            <button id="btnResume" class="w-full py-3 bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold rounded-xl transition">RESUME</button>
+            <button id="btnRestartPause" class="w-full py-3 bg-slate-800 border border-slate-700 hover:border-slate-500 text-slate-200 font-bold rounded-xl transition">RESTART LEVEL</button>
+            <button id="btnQuitToMenu" class="w-full py-3 bg-red-950/60 border border-red-800/60 text-red-400 font-bold rounded-xl transition">MAIN MENU</button>
+        </div>
+    </div>
+
+    <script>
+        /* --- GAME CONFIG & STATE --- */
+        const CANVAS = document.getElementById('gameCanvas');
+        const CTR = CANVAS.getContext('2d');
+
+        // Audio Context (Synthesized Audio)
+        let audioCtx = null;
+        function initAudio() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+        }
+
+        function playSound(type) {
+            if (!audioCtx || !settings.sfx) return;
+            try {
+                const now = audioCtx.currentTime;
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+
+                if (type === 'jump') {
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(150, now);
+                    osc.frequency.exponentialRampToValueAtTime(400, now + 0.12);
+                    gain.gain.setValueAtTime(0.3, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.12);
+                    osc.start(now);
+                    osc.stop(now + 0.12);
+                } else if (type === 'shift') {
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(600, now);
+                    osc.frequency.exponentialRampToValueAtTime(150, now + 0.15);
+                    gain.gain.setValueAtTime(0.3, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
+                    osc.start(now);
+                    osc.stop(now + 0.15);
+                } else if (type === 'win') {
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(300, now);
+                    osc.frequency.setValueAtTime(450, now + 0.1);
+                    osc.frequency.setValueAtTime(600, now + 0.2);
+                    gain.gain.setValueAtTime(0.4, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.35);
+                    osc.start(now);
+                    osc.stop(now + 0.35);
+                } else if (type === 'death') {
+                    osc.type = 'square';
+                    osc.frequency.setValueAtTime(200, now);
+                    osc.frequency.exponentialRampToValueAtTime(40, now + 0.2);
+                    gain.gain.setValueAtTime(0.4, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
+                    osc.start(now);
+                    osc.stop(now + 0.2);
+                }
+            } catch(e){}
+        }
+
+        // Settings & Local Storage Data
+        let settings = {
+            sfx: true,
+            ghost: true,
+            touchVis: true
+        };
+
+        let progress = {
+            unlockedWorld: 1,
+            unlockedLevel: 1,
+            activeTrail: 'cyan',
+            unlockedTrails: ['cyan'],
+            bestTimes: {} // key: levelIndex -> float seconds
+        };
+
+        function loadStorage() {
+            try {
+                const s = localStorage.getItem('nfo_settings');
+                if (s) settings = {...settings, ...JSON.parse(s)};
+                const p = localStorage.getItem('nfo_progress');
+                if (p) progress = {...progress, ...JSON.parse(p)};
+            } catch(e){}
+        }
+
+        function saveStorage() {
+            try {
+                localStorage.setItem('nfo_settings', JSON.stringify(settings));
+                localStorage.setItem('nfo_progress', JSON.stringify(progress));
+            } catch(e){}
+        }
+
+        loadStorage();
+
+        /* --- HYPER-RESPONSIVE CONTROLS ENGINE --- */
+        const keys = {
+            left: false,
+            right: false,
+            jump: false,
+            flux: false
+        };
+
+        // Clear all input states (used on focus loss, screen touch reset, etc)
+        function clearAllInputs() {
+            keys.left = false;
+            keys.right = false;
+            keys.jump = false;
+            keys.flux = false;
+            
+            // Remove active classes on touch buttons
+            document.querySelectorAll('.touch-btn').forEach(btn => btn.classList.remove('active'));
+        }
+
+        // Desktop Keyboard Setup
+        window.addEventListener('keydown', (e) => {
+            initAudio();
+            if (e.repeat) return;
+            const code = e.code;
+            if (code === 'KeyA' || code === 'ArrowLeft') keys.left = true;
+            if (code === 'KeyD' || code === 'ArrowRight') keys.right = true;
+            if (code === 'KeyW' || code === 'Space' || code === 'ArrowUp') {
+                keys.jump = true;
+                triggerJump();
+            }
+            if (code === 'ShiftLeft' || code === 'ShiftRight' || code === 'KeyK') {
+                keys.flux = true;
+                triggerFluxShift();
+            }
+            if (code === 'KeyR') restartLevel();
+            if (code === 'KeyP' || code === 'Escape') togglePause();
+        });
+
+        window.addEventListener('keyup', (e) => {
+            const code = e.code;
+            if (code === 'KeyA' || code === 'ArrowLeft') keys.left = false;
+            if (code === 'KeyD' || code === 'ArrowRight') keys.right = false;
+            if (code === 'KeyW' || code === 'Space' || code === 'ArrowUp') keys.jump = false;
+            if (code === 'ShiftLeft' || code === 'ShiftRight' || code === 'KeyK') keys.flux = false;
+        });
+
+        // Window focus loss reset
+        window.addEventListener('blur', clearAllInputs);
+        window.addEventListener('contextmenu', (e) => e.preventDefault());
+
+        // Mobile Multi-Touch Controller Integration
+        function setupTouchButton(id, actionFn, keyProp) {
+            const btn = document.getElementById(id);
+            if (!btn) return;
+
+            // Touch Tracking per Element
+            const activeTouches = new Set();
+
+            const handleStart = (e) => {
+                e.preventDefault();
+                initAudio();
+                for (let i = 0; i < e.changedTouches.length; i++) {
+                    activeTouches.add(e.changedTouches[i].identifier);
+                }
+                keys[keyProp] = true;
+                btn.classList.add('active');
+                if (actionFn) actionFn();
+            };
+
+            const handleEnd = (e) => {
+                e.preventDefault();
+                for (let i = 0; i < e.changedTouches.length; i++) {
+                    activeTouches.delete(e.changedTouches[i].identifier);
+                }
+                if (activeTouches.size === 0) {
+                    keys[keyProp] = false;
+                    btn.classList.remove('active');
+                }
+            };
+
+            btn.addEventListener('touchstart', handleStart, { passive: false });
+            btn.addEventListener('touchend', handleEnd, { passive: false });
+            btn.addEventListener('touchcancel', handleEnd, { passive: false });
+
+            // Direct Pointer Fallbacks for Hybrid Devices
+            btn.addEventListener('pointerdown', (e) => {
+                if (e.pointerType === 'mouse') {
+                    keys[keyProp] = true;
+                    btn.classList.add('active');
+                    if (actionFn) actionFn();
+                }
+            });
+            btn.addEventListener('pointerup', (e) => {
+                if (e.pointerType === 'mouse') {
+                    keys[keyProp] = false;
+                    btn.classList.remove('active');
+                }
+            });
+            btn.addEventListener('pointerleave', (e) => {
+                if (e.pointerType === 'mouse') {
+                    keys[keyProp] = false;
+                    btn.classList.remove('active');
+                }
+            });
+        }
+
+        setupTouchButton('btnLeft', null, 'left');
+        setupTouchButton('btnRight', null, 'right');
+        setupTouchButton('btnJump', triggerJump, 'jump');
+        setupTouchButton('btnFlux', triggerFluxShift, 'flux');
+
+        /* --- GAME ENGINE & PHYSICS --- */
+        const PHYSICS = {
+            gravity: 1200,
+            moveSpeed: 380,
+            jumpForce: 460,
+            minJumpForce: 200,
+            coyoteTimeMax: 0.15, // seconds
+            jumpBufferMax: 0.12, // seconds
+            fluxDashSpeed: 850
+        };
+
+        let gameState = 'MENU'; // MENU, PLAYING, PAUSED, LEVEL_SELECT
+        let currentWorld = 1;
+        let currentLevelNum = 1;
+        let levelTimer = 0;
+        let isRunning = false;
+
+        // Camera Offset
+        let camera = { x: 0, y: 0 };
+
+        // Player Instance
+        const player = {
+            x: 100,
+            y: 380,
+            vx: 0,
+            vy: 0,
+            w: 24,
+            h: 36,
+            grounded: false,
+            coyoteTimer: 0,
+            jumpBufferTimer: 0,
+            fluxPolarity: 'cyan', // 'cyan' or 'magenta'
+            isDashing: false,
+            dashTimer: 0,
+            trailHistory: []
+        };
+
+        // Level Entities
+        let currentLevelData = null;
+        let levelPlatforms = [];
+        let levelHazards = [];
+        let levelGoal = { x: 0, y: 0, w: 40, h: 50 };
+
+        // Ghost Playback / Recording
+        let ghostFrames = [];
+        let activeRecording = [];
+        let ghostPlaybackIndex = 0;
+
+        function triggerJump() {
+            player.jumpBufferTimer = PHYSICS.jumpBufferMax;
+        }
+
+        function triggerFluxShift() {
+            if (!isRunning) return;
+            player.fluxPolarity = (player.fluxPolarity === 'cyan') ? 'magenta' : 'cyan';
+            playSound('shift');
+
+            // Visual Burst
+            createParticles(player.x + player.w/2, player.y + player.h/2, player.fluxPolarity === 'cyan' ? '#00f3ff' : '#ff0055', 12);
+        }
+
+        /* --- LEVEL GENERATOR (50 DISTINCT LEVELS) --- */
+        function generateLevel(world, level) {
+            const index = (world - 1) * 10 + level;
+            const platforms = [];
+            const hazards = [];
+
+            // Solid Safe Starting Spawn Platform
+            platforms.push({ x: 50, y: 440, w: 300, h: 40, polarity: 'neutral' });
+
+            // Procedural/Algorithmic Level Architecture per World
+            let xCursor = 320;
+            let yCursor = 440;
+            const levelLength = 12 + level * 2;
+
+            for (let i = 0; i < levelLength; i++) {
+                const gap = 80 + Math.sin(i + index) * 30 + (world * 15);
+                const width = Math.max(100, 220 - (i * 4) - (world * 10));
+                yCursor += (Math.cos(i * 1.5) * 60);
+                yCursor = Math.max(200, Math.min(500, yCursor));
+
+                xCursor += gap;
+
+                // World Polarity Logic
+                let pol = 'neutral';
+                if (world >= 2 && i % 2 === 1) pol = 'cyan';
+                if (world >= 3 && i % 3 === 0) pol = 'magenta';
+                if (world >= 4 && i % 2 === 0) pol = (i % 4 === 0) ? 'cyan' : 'magenta';
+
+                platforms.push({ x: xCursor, y: yCursor, w: width, h: 30, polarity: pol });
+
+                // Spikes / Hazards
+                if (world >= 2 && i % 3 === 1 && width > 120) {
+                    hazards.push({ x: xCursor + width / 2 - 15, y: yCursor - 20, w: 30, h: 20 });
+                }
+
+                xCursor += width;
+            }
+
+            // End Goal Platform
+            platforms.push({ x: xCursor + 100, y: yCursor, w: 200, h: 40, polarity: 'neutral' });
+            const goal = { x: xCursor + 180, y: yCursor - 60, w: 40, h: 60 };
+
+            return {
+                id: index,
+                world: world,
+                level: level,
+                platforms: platforms,
+                hazards: hazards,
+                goal: goal
+            };
+        }
+
+        function loadLevel(world, level) {
+            currentWorld = world;
+            currentLevelNum = level;
+            currentLevelData = generateLevel(world, level);
+            levelPlatforms = currentLevelData.platforms;
+            levelHazards = currentLevelData.hazards;
+            levelGoal = currentLevelData.goal;
+
+            // Spawn Player Safely
+            player.x = 100;
+            player.y = 380;
+            player.vx = 0;
+            player.vy = 0;
+            player.grounded = true;
+            player.coyoteTimer = 0;
+            player.jumpBufferTimer = 0;
+            player.fluxPolarity = 'cyan';
+            player.trailHistory = [];
+
+            // Center Camera instantly
+            camera.x = player.x - CANVAS.width / 2;
+            camera.y = player.y - CANVAS.height / 2;
+
+            levelTimer = 0;
+            activeRecording = [];
+            ghostPlaybackIndex = 0;
+
+            // Load saved Ghost
+            const key = `nfo_ghost_${currentWorld}_${currentLevelNum}`;
+            const g = localStorage.getItem(key);
+            ghostFrames = g ? JSON.parse(g) : [];
+
+            document.getElementById('hudLevel').innerText = `${world} - ${level < 10 ? '0' + level : level}`;
+        }
+
+        /* --- PARTICLES SYSTEM --- */
+        let particles = [];
+        function createParticles(x, y, color, count = 8) {
+            for (let i = 0; i < count; i++) {
+                particles.push({
+                    x: x,
+                    y: y,
+                    vx: (Math.random() - 0.5) * 300,
+                    vy: (Math.random() - 0.5) * 300,
+                    color: color,
+                    life: 0.3 + Math.random() * 0.2,
+                    maxLife: 0.5
+                });
+            }
+        }
+
+        function updateParticles(dt) {
+            for (let i = particles.length - 1; i >= 0; i--) {
+                const p = particles[i];
+                p.x += p.vx * dt;
+                p.y += p.vy * dt;
+                p.life -= dt;
+                if (p.life <= 0) particles.splice(i, 1);
+            }
+        }
+
+        function drawParticles() {
+            particles.forEach(p => {
+                CTR.fillStyle = p.color;
+                CTR.globalAlpha = Math.max(0, p.life / p.maxLife);
+                CTR.beginPath();
+                CTR.arc(p.x - camera.x, p.y - camera.y, 3, 0, Math.PI * 2);
+                CTR.fill();
+            });
+            CTR.globalAlpha = 1.0;
+        }
+
+        /* --- UPDATE LOGIC --- */
+        let lastTime = performance.now();
+
+        function gameLoop(now) {
+            const dt = Math.min((now - lastTime) / 1000, 0.05); // Cap delta time
+            lastTime = now;
+
+            if (gameState === 'PLAYING') {
+                update(dt);
+            }
+            render();
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        function update(dt) {
+            levelTimer += dt;
+            document.getElementById('hudTimer').innerText = formatTime(levelTimer);
+
+            // Record Ghost Frame
+            if (settings.ghost) {
+                activeRecording.push({ x: player.x, y: player.y, pol: player.fluxPolarity });
+            }
+
+            // Horizontal Movement Input
+            let moveDir = 0;
+            if (keys.left) moveDir -= 1;
+            if (keys.right) moveDir += 1;
+
+            player.vx = moveDir * PHYSICS.moveSpeed;
+
+            // Gravity & Jump Buffering / Coyote Time
+            player.vy += PHYSICS.gravity * dt;
+
+            if (player.grounded) {
+                player.coyoteTimer = PHYSICS.coyoteTimeMax;
+            } else {
+                player.coyoteTimer -= dt;
+            }
+
+            if (player.jumpBufferTimer > 0) {
+                player.jumpBufferTimer -= dt;
+            }
+
+            // Trigger Jump Execution
+            if (player.jumpBufferTimer > 0 && player.coyoteTimer > 0) {
+                player.vy = -PHYSICS.jumpForce;
+                player.grounded = false;
+                player.coyoteTimer = 0;
+                player.jumpBufferTimer = 0;
+                playSound('jump');
+                createParticles(player.x + player.w/2, player.y + player.h, '#00f3ff', 6);
+            }
+
+            // Variable Jump Height Cutoff
+            if (!keys.jump && player.vy < -PHYSICS.minJumpForce) {
+                player.vy = -PHYSICS.minJumpForce;
+            }
+
+            // Horizontal Collision Step
+            player.x += player.vx * dt;
+            checkCollisions(true);
+
+            // Vertical Collision Step
+            player.y += player.vy * dt;
+            player.grounded = false;
+            checkCollisions(false);
+
+            // Check Hazards & Fall Death
+            if (player.y > 1000) {
+                handleDeath();
+            }
+
+            levelHazards.forEach(h => {
+                if (rectOverlap(player, h)) {
+                    handleDeath();
+                }
+            });
+
+            // Check Goal Reached
+            if (rectOverlap(player, levelGoal)) {
+                handleWin();
+            }
+
+            // Smooth Camera Follow
+            const targetCamX = player.x - CANVAS.width / 2;
+            const targetCamY = player.y - CANVAS.height / 2;
+            camera.x += (targetCamX - camera.x) * 10 * dt;
+            camera.y += (targetCamY - camera.y) * 10 * dt;
+
+            // Trail History
+            player.trailHistory.push({ x: player.x, y: player.y });
+            if (player.trailHistory.length > 10) player.trailHistory.shift();
+
+            updateParticles(dt);
+        }
+
+        function checkCollisions(isHorizontal) {
+            levelPlatforms.forEach(plat => {
+                // Polarity Collision Filter
+                if (plat.polarity !== 'neutral' && plat.polarity !== player.fluxPolarity) {
+                    return; // Phase through platform!
+                }
+
+                if (rectOverlap(player, plat)) {
+                    if (isHorizontal) {
+                        if (player.vx > 0) player.x = plat.x - player.w;
+                        else if (player.vx < 0) player.x = plat.x + plat.w;
+                    } else {
+                        if (player.vy > 0) {
+                            player.y = plat.y - player.h;
+                            player.vy = 0;
+                            player.grounded = true;
+                        } else if (player.vy < 0) {
+                            player.y = plat.y + plat.h;
+                            player.vy = 0;
+                        }
+                    }
+                }
+            });
+        }
+
+        function rectOverlap(r1, r2) {
+            return r1.x < r2.x + r2.w &&
+                   r1.x + r1.w > r2.x &&
+                   r1.y < r2.y + r2.h &&
+                   r1.y + r1.h > r2.y;
+        }
+
+        function handleDeath() {
+            playSound('death');
+            createParticles(player.x + player.w/2, player.y + player.h/2, '#ff0055', 25);
+            player.x = 100;
+            player.y = 380;
+            player.vx = 0;
+            player.vy = 0;
+            levelTimer = 0;
+            activeRecording = [];
+        }
+
+        function handleWin() {
+            playSound('win');
+            const levelIdx = (currentWorld - 1) * 10 + currentLevelNum;
+
+            // Save Best Time
+            if (!progress.bestTimes[levelIdx] || levelTimer < progress.bestTimes[levelIdx]) {
+                progress.bestTimes[levelIdx] = levelTimer;
+
+                // Save Ghost
+                if (settings.ghost && activeRecording.length > 0) {
+                    try {
+                        localStorage.setItem(`nfo_ghost_${currentWorld}_${currentLevelNum}`, JSON.stringify(activeRecording));
+                    } catch(e){}
+                }
+            }
+
+            // Unlock next level
+            if (currentLevelNum < 10) {
+                progress.unlockedLevel = Math.max(progress.unlockedLevel, currentLevelNum + 1);
+            } else if (currentWorld < 5) {
+                progress.unlockedWorld = Math.max(progress.unlockedWorld, currentWorld + 1);
+                progress.unlockedLevel = 1;
+            }
+
+            saveStorage();
+
+            // Load next level or return to level select
+            if (currentLevelNum < 10) {
+                loadLevel(currentWorld, currentLevelNum + 1);
+            } else if (currentWorld < 5) {
+                loadLevel(currentWorld + 1, 1);
+            } else {
+                openMenu('menuLevels');
+            }
+        }
+
+        /* --- RENDER ENGINE --- */
+        function render() {
+            // Resize Canvas
+            if (CANVAS.width !== window.innerWidth || CANVAS.height !== window.innerHeight) {
+                CANVAS.width = window.innerWidth;
+                CANVAS.height = window.innerHeight;
+            }
+
+            CTR.clearRect(0, 0, CANVAS.width, CANVAS.height);
+
+            // Draw Background Grid
+            drawGrid();
+
+            // Draw Platforms
+            levelPlatforms.forEach(plat => {
+                CTR.save();
+                let mainColor = '#ffffff';
+                let glowColor = 'rgba(255,255,255,0.2)';
+
+                if (plat.polarity === 'cyan') {
+                    mainColor = '#00f3ff';
+                    glowColor = 'rgba(0,243,255,0.4)';
+                } else if (plat.polarity === 'magenta') {
+                    mainColor = '#ff0055';
+                    glowColor = 'rgba(255,0,85,0.4)';
+                }
+
+                const isActive = (plat.polarity === 'neutral' || plat.polarity === player.fluxPolarity);
+
+                CTR.fillStyle = isActive ? mainColor : '#1e293b';
+                CTR.shadowColor = isActive ? mainColor : 'transparent';
+                CTR.shadowBlur = isActive ? 12 : 0;
+                CTR.globalAlpha = isActive ? 1.0 : 0.25;
+
+                CTR.fillRect(plat.x - camera.x, plat.y - camera.y, plat.w, plat.h);
+                CTR.restore();
+            });
+
+            // Draw Hazards (Spikes)
+            levelHazards.forEach(h => {
+                CTR.save();
+                CTR.fillStyle = '#ff0055';
+                CTR.shadowColor = '#ff0055';
+                CTR.shadowBlur = 10;
+
+                const screenX = h.x - camera.x;
+                const screenY = h.y - camera.y;
+
+                CTR.beginPath();
+                CTR.moveTo(screenX, screenY + h.h);
+                CTR.lineTo(screenX + h.w / 2, screenY);
+                CTR.lineTo(screenX + h.w, screenY + h.h);
+                CTR.closePath();
+                CTR.fill();
+                CTR.restore();
+            });
+
+            // Draw Level Goal Portal
+            CTR.save();
+            CTR.fillStyle = '#eab308';
+            CTR.shadowColor = '#eab308';
+            CTR.shadowBlur = 20;
+            CTR.fillRect(levelGoal.x - camera.x, levelGoal.y - camera.y, levelGoal.w, levelGoal.h);
+            CTR.restore();
+
+            // Draw Ghost Runner
+            if (settings.ghost && ghostFrames.length > 0 && gameState === 'PLAYING') {
+                const gFrame = ghostFrames[ghostPlaybackIndex];
+                if (gFrame) {
+                    CTR.save();
+                    CTR.fillStyle = 'rgba(255, 255, 255, 0.3)';
+                    CTR.fillRect(gFrame.x - camera.x, gFrame.y - camera.y, player.w, player.h);
+                    CTR.restore();
+                }
+                ghostPlaybackIndex = (ghostPlaybackIndex + 1) % ghostFrames.length;
+            }
+
+            // Draw Player Trail
+            const trailColor = getTrailColorHex();
+            player.trailHistory.forEach((t, i) => {
+                CTR.save();
+                CTR.fillStyle = trailColor;
+                CTR.globalAlpha = (i / player.trailHistory.length) * 0.4;
+                CTR.fillRect(t.x - camera.x, t.y - camera.y, player.w, player.h);
+                CTR.restore();
+            });
+
+            // Draw Player
+            CTR.save();
+            const pColor = player.fluxPolarity === 'cyan' ? '#00f3ff' : '#ff0055';
+            CTR.fillStyle = pColor;
+            CTR.shadowColor = pColor;
+            CTR.shadowBlur = 15;
+            CTR.fillRect(player.x - camera.x, player.y - camera.y, player.w, player.h);
+
+            // Player Core
+            CTR.fillStyle = '#ffffff';
+            CTR.fillRect(player.x - camera.x + 4, player.y - camera.y + 6, player.w - 8, player.h - 12);
+            CTR.restore();
+
+            // Draw Particles
+            drawParticles();
+        }
+
+        function drawGrid() {
+            CTR.save();
+            CTR.strokeStyle = 'rgba(30, 41, 59, 0.4)';
+            CTR.lineWidth = 1;
+            const gridSize = 60;
+            const offsetX = -camera.x % gridSize;
+            const offsetY = -camera.y % gridSize;
+
+            for (let x = offsetX; x < CANVAS.width; x += gridSize) {
+                CTR.beginPath();
+                CTR.moveTo(x, 0);
+                CTR.lineTo(x, CANVAS.height);
+                CTR.stroke();
+            }
+
+            for (let y = offsetY; y < CANVAS.height; y += gridSize) {
+                CTR.beginPath();
+                CTR.moveTo(0, y);
+                CTR.lineTo(CANVAS.width, y);
+                CTR.stroke();
+            }
+            CTR.restore();
+        }
+
+        function getTrailColorHex() {
+            switch(progress.activeTrail) {
+                case 'magenta': return '#ff0055';
+                case 'gold': return '#eab308';
+                case 'emerald': return '#10b981';
+                default: return '#00f3ff';
+            }
+        }
+
+        function formatTime(sec) {
+            const m = Math.floor(sec / 60);
+            const s = Math.floor(sec % 60);
+            const ms = Math.floor((sec % 1) * 100);
+            return `${m < 10 ? '0' + m : m}:${s < 10 ? '0' + s : s}.${ms < 10 ? '0' + ms : ms}`;
+        }
+
+        /* --- UI & MENUS ENGINE --- */
+        function hideAllMenus() {
+            ['menuMain', 'menuLevels', 'menuShop', 'menuSettings', 'menuPause'].forEach(id => {
+                document.getElementById(id).classList.add('hidden');
+            });
+        }
+
+        function openMenu(menuId) {
+            hideAllMenus();
+            document.getElementById(menuId).classList.remove('hidden');
+            if (menuId === 'menuMain') gameState = 'MENU';
+            if (menuId === 'menuLevels') buildLevelGrid(currentWorld);
+            if (menuId === 'menuShop') buildShopGrid();
+        }
+
+        function togglePause() {
+            if (gameState === 'PLAYING') {
+                gameState = 'PAUSED';
+                document.getElementById('menuPause').classList.remove('hidden');
+            } else if (gameState === 'PAUSED') {
+                gameState = 'PLAYING';
+                document.getElementById('menuPause').classList.add('hidden');
+            }
+        }
+
+        function restartLevel() {
+            clearAllInputs();
+            loadLevel(currentWorld, currentLevelNum);
+            gameState = 'PLAYING';
+            hideAllMenus();
+        }
+
+        // DOM Button Bindings
+        document.getElementById('btnPlay').onclick = () => {
+            restartLevel();
+        };
+
+        document.getElementById('btnLevelSelect').onclick = () => openMenu('menuLevels');
+        document.getElementById('btnCloseLevels').onclick = () => openMenu('menuMain');
+
+        document.getElementById('btnShop').onclick = () => openMenu('menuShop');
+        document.getElementById('btnCloseShop').onclick = () => openMenu('menuMain');
+
+        document.getElementById('btnSettings').onclick = () => openMenu('menuSettings');
+        document.getElementById('btnCloseSettings').onclick = () => openMenu('menuMain');
+
+        document.getElementById('btnPause').onclick = () => togglePause();
+        document.getElementById('btnResume').onclick = () => togglePause();
+        document.getElementById('btnRestart').onclick = () => restartLevel();
+        document.getElementById('btnRestartPause').onclick = () => restartLevel();
+        document.getElementById('btnQuitToMenu').onclick = () => openMenu('menuMain');
+
+        document.getElementById('btnFullscreen').onclick = () => {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen().catch(()=>{});
+            } else {
+                document.exitFullscreen().catch(()=>{});
+            }
+        };
+
+        // Settings Toggles
+        document.getElementById('settingSFX').onchange = (e) => {
+            settings.sfx = e.target.checked;
+            saveStorage();
+        };
+        document.getElementById('settingGhost').onchange = (e) => {
+            settings.ghost = e.target.checked;
+            saveStorage();
+        };
+        document.getElementById('settingTouchVis').onchange = (e) => {
+            settings.touchVis = e.target.checked;
+            document.getElementById('touchControls').style.display = settings.touchVis ? 'flex' : 'none';
+            saveStorage();
+        };
+
+        document.getElementById('btnResetData').onclick = () => {
+            if (confirm('Reset all progress and best times?')) {
+                localStorage.clear();
+                loadStorage();
+                openMenu('menuMain');
+            }
+        };
+
+        /* --- LEVEL SELECT GRID --- */
+        function buildLevelGrid(worldNum) {
+            currentWorld = worldNum;
+            const tabsCtr = document.getElementById('worldTabs');
+            tabsCtr.innerHTML = '';
+
+            for (let w = 1; w <= 5; w++) {
+                const btn = document.createElement('button');
+                btn.className = `px-4 py-2 rounded-xl font-bold transition text-sm flex-shrink-0 ${w === currentWorld ? 'bg-cyan-500 text-slate-950 shadow-lg' : 'bg-slate-900 border border-slate-800 text-slate-400'}`;
+                btn.innerText = `WORLD ${w}`;
+                btn.onclick = () => buildLevelGrid(w);
+                tabsCtr.appendChild(btn);
+            }
+
+            const gridCtr = document.getElementById('levelGrid');
+            gridCtr.innerHTML = '';
+
+            for (let l = 1; l <= 10; l++) {
+                const idx = (worldNum - 1) * 10 + l;
+                const isUnlocked = (worldNum < progress.unlockedWorld) || 
+                                   (worldNum === progress.unlockedWorld && l <= progress.unlockedLevel);
+                
+                const btn = document.createElement('button');
+                btn.className = `h-16 rounded-xl font-orbitron font-bold flex flex-col items-center justify-center transition ${isUnlocked ? 'bg-slate-900 border border-cyan-500/40 text-cyan-400 hover:bg-cyan-500 hover:text-slate-950' : 'bg-slate-950 border border-slate-800 text-slate-600 opacity-50 cursor-not-allowed'}`;
+
+                const bestTime = progress.bestTimes[idx];
+                btn.innerHTML = `<span>${l}</span>${bestTime ? `<span class="text-[9px] font-sans font-normal opacity-80">${formatTime(bestTime)}</span>` : ''}`;
+
+                if (isUnlocked) {
+                    btn.onclick = () => {
+                        loadLevel(worldNum, l);
+                        gameState = 'PLAYING';
+                        hideAllMenus();
+                    };
+                }
+
+                gridCtr.appendChild(btn);
+            }
+        }
+
+        /* --- COSMETIC SHOP --- */
+        const SHOP_ITEMS = [
+            { id: 'cyan', name: 'CYAN PULSE', color: '#00f3ff' },
+            { id: 'magenta', name: 'NEON MAGENTA', color: '#ff0055' },
+            { id: 'gold', name: 'OVERDRIVE GOLD', color: '#eab308' },
+            { id: 'emerald', name: 'CYBER EMERALD', color: '#10b981' }
+        ];
+
+        function buildShopGrid() {
+            const grid = document.getElementById('shopGrid');
+            grid.innerHTML = '';
+
+            SHOP_ITEMS.forEach(item => {
+                const isEquipped = progress.activeTrail === item.id;
+                const card = document.createElement('div');
+                card.className = `p-4 rounded-xl bg-slate-900 border ${isEquipped ? 'border-fuchsia-500 shadow-lg' : 'border-slate-800'} flex justify-between items-center`;
+
+                card.innerHTML = `
+                    <div class="flex items-center gap-3">
+                        <div class="w-8 h-8 rounded-lg shadow-md" style="background-color: ${item.color}"></div>
+                        <span class="font-bold text-slate-200">${item.name}</span>
+                    </div>
+                    <button class="px-4 py-2 rounded-xl text-sm font-bold transition ${isEquipped ? 'bg-fuchsia-500 text-slate-950' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'}">
+                        ${isEquipped ? 'EQUIPPED' : 'EQUIP'}
+                    </button>
+                `;
+
+                card.querySelector('button').onclick = () => {
+                    progress.activeTrail = item.id;
+                    saveStorage();
+                    buildShopGrid();
+                };
+
+                grid.appendChild(card);
+            });
+        }
+
+        // Initialize Loop & Startup Level
+        loadLevel(1, 1);
+        requestAnimationFrame(gameLoop);
+    </script>
+</body>
+</html>
